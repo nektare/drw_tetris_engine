@@ -88,7 +88,7 @@ TEST(TetrisEngineFastTest, Run_DRWInputFile) {
     std::ostringstream captured;
     std::streambuf* orig = std::cout.rdbuf(captured.rdbuf());
     TetrisEngineFast engine;
-    engine.run("test/drw_test_input.txt");
+    engine.run("test/data/drw_test_input.txt");
     std::cout.rdbuf(orig);
 
     std::cout << captured.str();
