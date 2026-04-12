@@ -4,73 +4,65 @@
 #include "../src/TetrisEngineBitset.hpp"
 #undef private
 
-// findRestingY
-TEST(TetrisEngineBitset, FindRestingY_EmptyBoard_LandsAtZero) {
-    TetrisEngineFast engine;
-    auto piece = engine.PieceLookup['Q'];
-    EXPECT_EQ(engine.findRestingY(piece, 0), 0);
+// collides (exercises findRestingY logic)
+TEST(TetrisEngineBitset, Collides_EmptyBoard_NoCollision) {
+    TetrisEngineBitset engine;
+    auto piece = Tetris::PieceTable['Q'];
+    EXPECT_FALSE(engine.board.collides(piece, 0, 0));
 }
 
-TEST(TetrisEngineBitset, FindRestingY_BlockedRow_LandsOnTop) {
-    TetrisEngineFast engine;
-    engine.board.push_back({true, true, false, false, false, false, false, false, false, false});
-    auto piece = engine.PieceLookup['Q']; // 2 wide
-    // col 0-1 occupied at y=0, Q should rest at y=1
-    EXPECT_EQ(engine.findRestingY(piece, 0), 1);
+TEST(TetrisEngineBitset, Collides_BlockedRow_DetectsCollision) {
+    TetrisEngineBitset engine;
+    engine.board.rows[0] = 0b11; // cols 0,1 occupied at row 0
+    engine.board.height = 1;
+    auto piece = Tetris::PieceTable['Q']; // 2 wide
+    EXPECT_TRUE(engine.board.collides(piece, 0, 0));
 }
 
-// placePiece
-TEST(TetrisEngineBitset, PlacePiece_QAtOrigin_SetsFourCells) {
-    TetrisEngineFast engine;
-    auto piece = engine.PieceLookup['Q']; // (0,0),(1,0),(0,1),(1,1)
-    engine.placePiece(piece, 0, 0);
-    EXPECT_TRUE(engine.board[0][0]);
-    EXPECT_TRUE(engine.board[0][1]);
-    EXPECT_TRUE(engine.board[1][0]);
-    EXPECT_TRUE(engine.board[1][1]);
+// place
+TEST(TetrisEngineBitset, PlacePiece_QAtOrigin_SetsBits) {
+    TetrisEngineBitset engine;
+    auto piece = Tetris::PieceTable['Q']; // rows: 0b11, 0b11
+    engine.board.place(piece, 0, 0);
+    EXPECT_EQ(engine.board.rows[0] & 0b11, 0b11u);
+    EXPECT_EQ(engine.board.rows[1] & 0b11, 0b11u);
 }
 
-TEST(TetrisEngineBitset, PlacePiece_GrowsBoardAsNeeded) {
-    TetrisEngineFast engine;
-    auto piece = engine.PieceLookup['I']; // 4 wide, 1 tall
-    engine.placePiece(piece, 0, 0);
-    EXPECT_EQ(engine.board.size(), 1u);
+TEST(TetrisEngineBitset, PlacePiece_GrowsHeightAsNeeded) {
+    TetrisEngineBitset engine;
+    auto piece = Tetris::PieceTable['I']; // 1 row tall
+    engine.board.place(piece, 0, 0);
+    EXPECT_EQ(engine.board.height, 1);
 }
 
-// clearLines
+// clearFullLines
 TEST(TetrisEngineBitset, ClearLines_FullRow_IsRemoved) {
-    TetrisEngineFast engine;
-    TetrisEngineFast::Row full;
-    full.fill(true);
-    engine.board.push_back(full);
-    engine.clearLines();
-    EXPECT_EQ(engine.board.size(), 0u);
+    TetrisEngineBitset engine;
+    engine.board.rows[0] = 0x3FF; // all 10 bits set
+    engine.board.height = 1;
+    engine.board.clearFullLines();
+    EXPECT_EQ(engine.board.height, 0);
 }
 
 TEST(TetrisEngineBitset, ClearLines_PartialRow_IsKept) {
-    TetrisEngineFast engine;
-    TetrisEngineFast::Row partial{};
-    partial[0] = true;
-    engine.board.push_back(partial);
-    engine.clearLines();
-    EXPECT_EQ(engine.board.size(), 1u);
+    TetrisEngineBitset engine;
+    engine.board.rows[0] = 0b11; // partial row
+    engine.board.height = 1;
+    engine.board.clearFullLines();
+    EXPECT_EQ(engine.board.height, 1);
 }
 
 // processLine
 TEST(TetrisEngineBitset, ProcessLine_SingleQ_HeightIsTwo) {
-    TetrisEngineFast engine;
-    std::streambuf* orig = std::cout.rdbuf(nullptr);
+    TetrisEngineBitset engine;
     engine.processLine("Q0");
-    std::cout.rdbuf(orig);
-    EXPECT_EQ(engine.board.size(), 2u);
+    EXPECT_EQ(engine.board.height, 2);
 }
 
 TEST(TetrisEngineBitset, ProcessLine_TwoQsSameColumn_HeightIsFour) {
-    TetrisEngineFast engine;
-    std::streambuf* orig = std::cout.rdbuf(nullptr);
+    TetrisEngineBitset engine;
     engine.processLine("Q0,Q0");
-    std::cout.rdbuf(orig);
-    EXPECT_EQ(engine.board.size(), 4u);
+    EXPECT_EQ(engine.board.height, 4);
 }
 
 // run
@@ -92,17 +84,23 @@ TEST(TetrisEngineBitset, Run_DRWInputFile) {
 
     std::ostringstream captured;
     std::streambuf* orig = std::cout.rdbuf(captured.rdbuf());
-    TetrisEngineFast engine;
+    TetrisEngineBitset engine;
     engine.run("test/drw_test_input.txt");
     std::cout.rdbuf(orig);
 
-    std::istringstream ss(captured.str());
+    std::cout << captured.str();
+
+    std::string output = captured.str();
+    std::replace(output.begin(), output.end(), '\r', '\n');
+    std::istringstream ss(output);
     std::string line;
     int i = 0;
     while (std::getline(ss, line)) {
-        // output format: "Height after [seq] = N" — extract the height value after "= "
-        size_t pos = line.rfind("= ");
-        std::string height = (pos != std::string::npos) ? line.substr(pos + 2) : line;
+        if (line.empty()) continue;
+        size_t lb = line.find('[');
+        size_t rb = line.find(']');
+        if (lb == std::string::npos || rb == std::string::npos) continue;
+        std::string height = line.substr(lb + 1, rb - lb - 1);
         EXPECT_EQ(height, expected[i]) << "Line " << i;
         ++i;
     }
