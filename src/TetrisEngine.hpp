@@ -14,6 +14,7 @@ private:
     // Point definition uses (x, y) where x is column and y is row
     // This matches "human" way of reading a letter on X-Y coord system
     // HOWEVER, the actual engine logic uses (y,x) in calculations.
+    // Hence you will see board[ty][tx] everywhere
     struct Point {
         int x, y;
     };
@@ -24,8 +25,8 @@ private:
         {'S', {{0,0}, {1,0}, {1,1}, {2,1}}}, // Horizontal S
         {'T', {{0,1}, {1,1}, {2,1}, {1,0}}}, // T with nub pointing DOWN
         {'I', {{0,0}, {1,0}, {2,0}, {3,0}}}, // Horizontal 4-unit bar
-        {'L', {{0,0}, {0,1}, {0,2}, {1,0}}}, // Vertical stem left
-        {'J', {{1,0}, {1,1}, {1,2}, {0,0}}}  // Vertical stem right
+        {'L', {{0,0}, {0,1}, {0,2}, {1,0}}}, // Vertical base stem left
+        {'J', {{1,0}, {1,1}, {1,2}, {0,0}}}  // Vertical base stem right
     };
 
     using Row = std::array<bool, 10>;
@@ -70,19 +71,37 @@ private:
         }
     }
 
-    // Remove full rows and drop higher rows down 
+    // collect nonfull rows at one end and resize the board vector
+    // to get rid of full rows in one fell swoop
     void clearLines() {
-        for (int y = (int)board.size() - 1; y >= 0; --y) {
+        size_t writePtr = 0;
+        const size_t totalRows = board.size();
+    
+        for (size_t readPtr = 0; readPtr < totalRows; ++readPtr) {
             bool isFull = true;
-            for (int x = 0; x < 10; ++x) {
-                if (!board[y][x]) {
+            
+            // Grid is 10 units wide
+            for (size_t x = 0; x < 10; ++x) {
+                if (!board[readPtr][x]) {
                     isFull = false;
                     break;
                 }
             }
-            if (isFull) {
-                board.erase(board.begin() + y); // Higher rows drop automatically 
+    
+            if (!isFull) {
+                // Keep this row by moving it to the write position
+                if (writePtr != readPtr) {
+                    board[writePtr] = std::move(board[readPtr]);
+                }
+                writePtr++;
             }
+            // If isFull is true, the readPtr advances but writePtr stays, 
+            // effectively "deleting" the full row.
+        }
+    
+        // Shrink the vector only once at the end
+        if (writePtr < totalRows) {
+            board.resize(writePtr);
         }
     }
 
@@ -103,7 +122,7 @@ private:
             placePiece(piece, startX, restingY);
             clearLines(); // full rows removed after each piece placement
         }
-        std::cout << board.size() << std::endl; // Output resulting height
+        std::cout << "Height = [" << board.size() << "] after line = " << line; // line has newline at the end
     }
 
 public:

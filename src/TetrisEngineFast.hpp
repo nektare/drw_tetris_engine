@@ -1,48 +1,66 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <cstring>
+#include <string_view>
+#include <sstream>
 #include <vector>
 #include <array>
 #include <algorithm>
-#include <cstdint>
 
 class TetrisEngineFast {
 
 private:
-    // Each row is viewed as a 10-bit integer. 0x3FF represents a full row (1111111111).
-    // Using a fixed array of 128 to stay in L1 cache and avoid heap allocation.
-    uint16_t board[128]; 
-    int currentHeight;
+    struct Point {
+        int x, y;
+    };
 
-    // LUT for shapes. Each shape is a 4-integer array (row masks).
-    // Bottom row of the piece is index 0.
-    struct Piece { uint16_t rows[4]; int h; };
-    
-    Piece getPiece(char type) {
-        switch (type) {
-            case 'Q': return {{0b11, 0b11, 0, 0}, 2};   
-            case 'Z': return {{0b110, 0b011, 0, 0}, 2}; 
-            case 'S': return {{0b011, 0b110, 0, 0}, 2}; 
-            case 'T': return {{0b010, 0b111, 0, 0}, 2}; 
-            case 'I': return {{0b1111, 0, 0, 0}, 1};    
-            case 'L': return {{0b11, 0b01, 0b01, 0}, 3};
-            case 'J': return {{0b11, 0b10, 0b10, 0}, 3};
-            default: return {{0, 0, 0, 0}, 0};
-        }
-    }
+    // Fixed size Piece struct for stack allocation
+    struct Piece {
+        std::array<Point, 4> points;
+    };
 
-    // find the bottom y to rest on for the piece
-    inline int findRestingY(const Piece& p, int startX) {
-        uint16_t pMasks[4];
-        for (int i = 0; i < 4; ++i) pMasks[i] = p.rows[i] << startX;
+    // O(1) Lookup Table using ASCII index key
+    // functions like map, but no dynamic allocation, 
+    // no hashing, no pointer indirection
+    // Piece definitions don't change and the memory desired is small
+    // This structure is bakedinto the binary at compile time
+    static constexpr std::array<Piece, 256> PieceLookup = []() {
+        std::array<Piece, 256> lookup{};
+        // Coordinates {x, y} relative to the bottom-left of the piece. 
+        lookup['Q'] = Piece{{{{0,0}, {1,0}, {0,1}, {1,1}}}}; // Square
+        lookup['Z'] = Piece{{{{0,1}, {1,1}, {1,0}, {2,0}}}}; // Z
+        lookup['S'] = Piece{{{{0,0}, {1,0}, {1,1}, {2,1}}}}; // S
+        lookup['T'] = Piece{{{{0,1}, {1,1}, {2,1}, {1,0}}}}; // T nub DOWN
+        lookup['I'] = Piece{{{{0,0}, {1,0}, {2,0}, {3,0}}}}; // Horizontal bar
+        lookup['L'] = Piece{{{{0,0}, {0,1}, {0,2}, {1,0}}}}; // Vertical L, base stem to right
+        lookup['J'] = Piece{{{{1,0}, {1,1}, {1,2}, {0,0}}}}; // Vertical J, base stem to left
+        return lookup;
+    }();
 
-        // Top-down scan for the first collision 
-        for (int trialY = currentHeight; trialY >= 0; --trialY) {
+    using Row = std::array<bool, 10>;
+    std::vector<Row> board; // test spec says height can be assumed max 100
+    // I was thinking of going with array instead of vector for ease of logic.
+    // When I use vector, I dont have to keep track of "height". Size gives the height 
+    // Hence going with vector. It is heap allocation but contiguous. 
+    // So it is not that bad.
+
+    // Find resting Y-coord using a top-down collision scan 
+    int findRestingY(const Piece& piece, int startX) {
+
+        for (int trialY = (int)board.size(); trialY >= 0; --trialY) {
             bool collision = false;
-            for (int i = 0; i < p.h; ++i) {
-                // Bitwise AND for O(1) collision check per row
-                if ((board[trialY + i] & pMasks[i]) != 0) {
+            for (const auto& p : piece.points) {
+                int tx = startX + p.x;
+                int ty = trialY + p.y;
+
+                // Boundary Safety: Ensure we don't access column 10+ 
+                if (tx < 0 || tx >= 10) [[unlikely]] continue; 
+
+                if (ty < 0) {
+                    collision = true;
+                    break;
+                }
+                if (ty < (int)board.size() && board[ty][tx]) {
                     collision = true;
                     break;
                 }
@@ -52,57 +70,134 @@ private:
         return 0;
     }
 
-    // Mark the cells (bits) to 1 when a piece is placed.
-    // Update the current height
-    inline void placePiece(const Piece& p, int startX, int restingY) {
-        for (int i = 0; i < p.h; ++i) {
-            // bitwise OR for O(1) placement
-            board[restingY + i] |= (p.rows[i] << startX);
+    // Place piece and grow board vertically as needed 
+    void placePiece(const Piece& piece, int startX, int restingY) {
+        for (const auto& p : piece.points) {
+            int tx = startX + p.x;
+            int ty = restingY + p.y;
+
+            // Boundary Safety
+            if (tx < 0 || tx >= 10) [[unlikely]] continue;
+
+            while (ty >= (int)board.size()) {
+                board.push_back(Row{false});
+            }
+            board[ty][tx] = true;
         }
-        currentHeight = std::max(currentHeight, restingY + p.h);
     }
 
-    // detect full lines after each piece placement (10 bits show 0x3FF)
-    // 
-    inline void clearLines() {
-        for (int y = currentHeight - 1; y >= 0; --y) {
-            if (board[y] == 0x3FF) { // 0x3FF = 10 bits set 
-                // Shift all rows above down by one
-                for (int i = y; i < currentHeight; ++i) {
-                    board[i] = board[i + 1];
+    // Used two pointers: O(N) cost
+    // Think of writePtr as the last non full row from bottom to top
+    // All rows under it non full. All above it full 
+    void clearLines() {
+        size_t writePtr = 0;
+        const size_t totalRows = board.size();
+    
+        // readptr and writeptr start together
+        // as below for-loop loops, readptr row is checked for full ness
+        for (size_t readPtr = 0; readPtr < totalRows; ++readPtr) {
+
+            bool isFull = true; 
+            for (size_t x = 0; x < 10; ++x) {
+                if (!board[readPtr][x]) {
+                    isFull = false;
+                    break;
                 }
-                board[currentHeight] = 0;
-                currentHeight--;
+            }
+            // if the row of readptr is not full, writeptr and readptr advance 
+            // Imp Note: at full rows, writeptr would point to full row at PREVIOUS
+            // iteration. Thus writeptr starts point to first full row. 
+            // As readptr moves to next row
+            // if it also full, writeptr still stays at the previous full row
+            // this continues till readptr hits a non-full row at this point, wrtitepr ! readptr and 
+            // that nonfull row gets moved to botton first row that needs discarding.
+            // EFFECTIVELY : Writeptr always points to the FIRST FULL ROW 
+            // with all non-full rows below it 
+            if (!isFull) {
+                if (writePtr != readPtr) {
+                    board[writePtr] = std::move(board[readPtr]);
+                }
+                writePtr++;
             }
         }
+    
+        // since writeptr points to first full row to be discarded, resize to 
+        if (writePtr < totalRows) {
+            board.resize(writePtr);
+        }
     }
 
-    void processLine(const std::string& line) {
-        // Reset board for every line 
-        std::fill(std::begin(board), std::end(board), 0);
-        currentHeight = 0;
+    void processToken(std::string_view token) {
+        
+        char type = token[0];
+        
+        // test spec says piece input is 1 letter follow by 
+        // leftmost col number which can only be 0-9 (since grid width  = 10)
+        int startX = token[1] - '0';
 
-        size_t pos = 0;
-        while (pos < line.length()) {
-            char type = line[pos];
-            int startX = line[pos + 1] - '0';
+        const Piece& piece = PieceLookup[type];
+        
+        // Boundary validation (skip piece if boundary violated)
+        // test exercise pdf says I may ignore, this is just an 
+        // extra check to ack the possibility and highlight
+        // compiler guidance hints.
 
-            Piece p = getPiece(type);
-            int restingY = findRestingY(p, startX);
-            placePiece(p, startX, restingY);
-            clearLines();
+        // One note: I have used these hints only for extremities
+        // so that all hot-path logic stays together and improbably 
+        // code gets pushed farther away from hot path.
 
-            pos += (pos + 2 < line.length() && line[pos + 2] == ',') ? 3 : 2;
+        bool outOfBounds = false;
+        for (const auto& p : piece.points) {
+            if (startX + p.x >= 10) [[unlikely]] {
+                outOfBounds = true;
+                break;
+            }
         }
-        std::cout << currentHeight << std::endl;
+        if (!outOfBounds) [[likely]] {
+            int restingY = findRestingY(piece, startX);
+            placePiece(piece, startX, restingY);
+            clearLines();
+        }
+    }
+
+
+    void processLine(std::string_view line) {
+
+        board.clear(); // spec says: for each new input line containing  
+                       // pieces sequence, start with empty board
+        
+        size_t start = 0;
+        while (start < line.size()) {
+
+            size_t end = line.find(',', start);
+            
+            // Slice the token without copying - highlighting why I used string_view 
+            // Had I pass const std:string&, substr would have resulted in new heap allocation
+            std::string_view token = line.substr(start, (end == std::string_view::npos) ? 
+                                                            std::string_view::npos : end - start);
+
+            // better branch prediction with [[likely]]
+            // This is compiled with C++20, prior to that intrinsic was __builtin_expect
+            // Compiler assumes non-empty token to be the hot path and 
+            // keeps CPU instruction pipeline full 
+            
+            if (!token.empty()) {
+                processToken(token);
+            }
+
+            // if we just processed the last piece, break out of the line processing loop
+            if (end == std::string_view::npos) break;
+
+            start = end + 1;
+        }
+        
+        std::cout << "Height = [" << board.size() << "] after line = " << line; // line has newline at the end
+
     }
 
 public:
 
-    // Constructor : clean initial state
-    TetrisEngine() : board{}, currentHeight(0) {}
-
-    void run(std::string filename) {
+    void run(const std::string& filename) {
         std::ifstream file(filename);
         if (!file.is_open()) {
             std::cerr << "Error: Could not open file " << filename << std::endl;

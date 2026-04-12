@@ -1,17 +1,17 @@
 #include <gtest/gtest.h>
 
 #define private public
-#include "../src/TetrisEngineFast.hpp"
+#include "../src/TetrisEngineBitset.hpp"
 #undef private
 
 // findRestingY
-TEST(TetrisEngineFastTest, FindRestingY_EmptyBoard_LandsAtZero) {
+TEST(TetrisEngineBitset, FindRestingY_EmptyBoard_LandsAtZero) {
     TetrisEngineFast engine;
     auto piece = engine.PieceLookup['Q'];
     EXPECT_EQ(engine.findRestingY(piece, 0), 0);
 }
 
-TEST(TetrisEngineFastTest, FindRestingY_BlockedRow_LandsOnTop) {
+TEST(TetrisEngineBitset, FindRestingY_BlockedRow_LandsOnTop) {
     TetrisEngineFast engine;
     engine.board.push_back({true, true, false, false, false, false, false, false, false, false});
     auto piece = engine.PieceLookup['Q']; // 2 wide
@@ -20,7 +20,7 @@ TEST(TetrisEngineFastTest, FindRestingY_BlockedRow_LandsOnTop) {
 }
 
 // placePiece
-TEST(TetrisEngineFastTest, PlacePiece_QAtOrigin_SetsFourCells) {
+TEST(TetrisEngineBitset, PlacePiece_QAtOrigin_SetsFourCells) {
     TetrisEngineFast engine;
     auto piece = engine.PieceLookup['Q']; // (0,0),(1,0),(0,1),(1,1)
     engine.placePiece(piece, 0, 0);
@@ -30,7 +30,7 @@ TEST(TetrisEngineFastTest, PlacePiece_QAtOrigin_SetsFourCells) {
     EXPECT_TRUE(engine.board[1][1]);
 }
 
-TEST(TetrisEngineFastTest, PlacePiece_GrowsBoardAsNeeded) {
+TEST(TetrisEngineBitset, PlacePiece_GrowsBoardAsNeeded) {
     TetrisEngineFast engine;
     auto piece = engine.PieceLookup['I']; // 4 wide, 1 tall
     engine.placePiece(piece, 0, 0);
@@ -38,7 +38,7 @@ TEST(TetrisEngineFastTest, PlacePiece_GrowsBoardAsNeeded) {
 }
 
 // clearLines
-TEST(TetrisEngineFastTest, ClearLines_FullRow_IsRemoved) {
+TEST(TetrisEngineBitset, ClearLines_FullRow_IsRemoved) {
     TetrisEngineFast engine;
     TetrisEngineFast::Row full;
     full.fill(true);
@@ -47,7 +47,7 @@ TEST(TetrisEngineFastTest, ClearLines_FullRow_IsRemoved) {
     EXPECT_EQ(engine.board.size(), 0u);
 }
 
-TEST(TetrisEngineFastTest, ClearLines_PartialRow_IsKept) {
+TEST(TetrisEngineBitset, ClearLines_PartialRow_IsKept) {
     TetrisEngineFast engine;
     TetrisEngineFast::Row partial{};
     partial[0] = true;
@@ -57,20 +57,24 @@ TEST(TetrisEngineFastTest, ClearLines_PartialRow_IsKept) {
 }
 
 // processLine
-TEST(TetrisEngineFastTest, ProcessLine_SingleQ_HeightIsTwo) {
+TEST(TetrisEngineBitset, ProcessLine_SingleQ_HeightIsTwo) {
     TetrisEngineFast engine;
+    std::streambuf* orig = std::cout.rdbuf(nullptr);
     engine.processLine("Q0");
+    std::cout.rdbuf(orig);
     EXPECT_EQ(engine.board.size(), 2u);
 }
 
-TEST(TetrisEngineFastTest, ProcessLine_TwoQsSameColumn_HeightIsFour) {
+TEST(TetrisEngineBitset, ProcessLine_TwoQsSameColumn_HeightIsFour) {
     TetrisEngineFast engine;
+    std::streambuf* orig = std::cout.rdbuf(nullptr);
     engine.processLine("Q0,Q0");
+    std::cout.rdbuf(orig);
     EXPECT_EQ(engine.board.size(), 4u);
 }
 
 // run
-TEST(TetrisEngineFastTest, Run_DRWInputFile) {
+TEST(TetrisEngineBitset, Run_DRWInputFile) {
     std::vector<std::string> expected = {
                // Sequence                          Expected
         "1",   // I0,I4,Q8                    →  1   (PDF example 1: bottom row clears)
@@ -92,19 +96,13 @@ TEST(TetrisEngineFastTest, Run_DRWInputFile) {
     engine.run("test/drw_test_input.txt");
     std::cout.rdbuf(orig);
 
-    std::cout << captured.str();
-
-    std::string output = captured.str();
-    std::replace(output.begin(), output.end(), '\r', '\n');
-    std::istringstream ss(output);
+    std::istringstream ss(captured.str());
     std::string line;
     int i = 0;
     while (std::getline(ss, line)) {
-        if (line.empty()) continue;
-        size_t lb = line.find('[');
-        size_t rb = line.find(']');
-        if (lb == std::string::npos || rb == std::string::npos) continue;
-        std::string height = line.substr(lb + 1, rb - lb - 1);
+        // output format: "Height after [seq] = N" — extract the height value after "= "
+        size_t pos = line.rfind("= ");
+        std::string height = (pos != std::string::npos) ? line.substr(pos + 2) : line;
         EXPECT_EQ(height, expected[i]) << "Line " << i;
         ++i;
     }
