@@ -7,10 +7,10 @@ Processes sequences of pre-defined Tetris pieces dropped into a 10-unit wide gri
 ## Key Features
 
 - **Templatized Architecture** — single engine logic supporting multiple board implementations via compile-time polymorphism
-- **Bitset Board** — high-performance implementation using bitwise operations for O(1) collision detection and placement
+- **Bitset Board** — better-performance implementation using bitwise operations for O(1) collision detection and placement
 - **Two-Pointer Row Clearing** — stable read/write compaction for O(N) clearing with zero extra allocations
-- **Zero-Allocation Parsing** — `std::string_view` throughout to eliminate heap fragmentation
-- **Compile-Time LUTs** — all piece geometries stored in `static constexpr` lookup tables, no runtime hashing
+- **Zero-Allocation Parsing** — `std::string_view` throughout to eliminate new heap allocations and in the long run heap fragmentation
+- **Compile-Time Lookup tables** — all piece geometries stored in `static constexpr` lookup tables, no runtime hashing
 
 ## Project Structure
 
