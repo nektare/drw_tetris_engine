@@ -18,10 +18,11 @@ Processes sequences of pre-defined Tetris pieces dropped into a 10-unit wide gri
 src/TetrisEngine.hpp          # Templatized engine logic
 src/TetrisTypes.hpp           # Standard coordinate-based board and piece types
 src/TetrisTypesBitset.hpp     # Optimized bitset board and piece types
-test/TetrisEngineTest.cpp     # Unit tests (GoogleTest)
-test/drw_test_input.txt       # Unit Test input
-test/drw_test_output.txt      # Unit Test output
-test/TetrisEnginePerfTest.cpp # Performance benchmark
+test/TetrisEngineTest.cpp              # Full engine tests (GoogleTest)
+test/TetrisEngineFunctionLevelTest.cpp # Function-level unit tests (GoogleTest)
+test/TetrisEnginePerfTest.cpp          # Performance benchmark
+test/drw_test_input.txt                # Test input
+test/drw_test_output.txt               # Test output
 ```
 
 ## Building and Running
