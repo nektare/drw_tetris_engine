@@ -1,8 +1,8 @@
 #pragma once
-#include <vector>
+#include <cstdint>
 #include <array>
 #include <algorithm>
-#include <cstdint>
+#include <vector>
 
 namespace Tetris {
 
@@ -20,53 +20,48 @@ namespace Tetris {
     // no hashing, no pointer indirection
     // Piece definitions don't change and the memory desired is small
     // This structure is bakedinto the binary at compile time
-    static constexpr std::array<Piece, 256> PieceLookup = []() {
-        std::array<Piece, 256> lookup{};
+    static constexpr std::array<Piece, 256> PieceTable = []() {
+        std::array<Piece, 256> table{};
         // Coordinates {x, y} relative to the bottom-left of the piece. 
-        lookup['Q'] = Piece{{{{0,0}, {1,0}, {0,1}, {1,1}}}}; // Square
-        lookup['Z'] = Piece{{{{0,1}, {1,1}, {1,0}, {2,0}}}}; // Z
-        lookup['S'] = Piece{{{{0,0}, {1,0}, {1,1}, {2,1}}}}; // S
-        lookup['T'] = Piece{{{{0,1}, {1,1}, {2,1}, {1,0}}}}; // T nub DOWN
-        lookup['I'] = Piece{{{{0,0}, {1,0}, {2,0}, {3,0}}}}; // Horizontal bar
-        lookup['L'] = Piece{{{{0,0}, {0,1}, {0,2}, {1,0}}}}; // Vertical L, base stem to right
-        lookup['J'] = Piece{{{{1,0}, {1,1}, {1,2}, {0,0}}}}; // Vertical J, base stem to left
-        return lookup;
+        table['Q'] = Piece{{{{0,0}, {1,0}, {0,1}, {1,1}}}}; // Square
+        table['Z'] = Piece{{{{0,1}, {1,1}, {1,0}, {2,0}}}}; // Z
+        table['S'] = Piece{{{{0,0}, {1,0}, {1,1}, {2,1}}}}; // S
+        table['T'] = Piece{{{{0,1}, {1,1}, {2,1}, {1,0}}}}; // T nub DOWN
+        table['I'] = Piece{{{{0,0}, {1,0}, {2,0}, {3,0}}}}; // Horizontal bar
+        table['L'] = Piece{{{{0,0}, {0,1}, {0,2}, {1,0}}}}; // Vertical L, base stem to right
+        table['J'] = Piece{{{{1,0}, {1,1}, {1,2}, {0,0}}}}; // Vertical J, base stem to left
+        return table;
     }();
 
-    using Row = std::array<bool, 10>;
-
-    struct FastBoard {
-        std::vector<Row> grid; // test spec says height can be assumed max 100
-        // I was thinking of going with array instead of vector for ease of logic.
-        // When I use vector, I dont have to keep track of "height". Size gives the height 
-        // Hence going with vector. It is heap allocation but contiguous. 
-        // So it is not that bad.
+    struct Board {
+        
+        std::vector<std::array<bool, 10>> grid; // test spec says height can be assumed max 100
+        // with a vector, I dont have to keep track of "height". Size gives the height 
+        // Its heap allocation is contiguous. So it is not that bad.
+        
+        inline int getHeight() {
+            return grid.size();
+        }
 
         inline void reset() {
             grid.clear(); // spec says: for each new input line start with empty board
         }
 
+        // Helper for collision detection to keep findRestingY clean
+        inline bool collides(const Piece& piece, int startX, int trialY) const {
+            for (const auto& p : piece.points) {
+                int tx = startX + p.x;
+                int ty = trialY + p.y;
+                if (ty < 0) return true;
+                if (ty < (int)grid.size() && grid[ty][tx]) return true;
+            }
+            return false;
+        }
+
         // Find resting Y-coord using a top-down collision scan 
         inline int findRestingY(const Piece& piece, int startX) const {
             for (int trialY = (int)grid.size(); trialY >= 0; --trialY) {
-                bool collision = false;
-                for (const auto& p : piece.points) {
-                    int tx = startX + p.x;
-                    int ty = trialY + p.y;
-
-                    // Boundary Safety: Ensure we don't access column 10+ 
-                    if (tx < 0 || tx >= 10) [[unlikely]] continue; 
-
-                    if (ty < 0) {
-                        collision = true;
-                        break;
-                    }
-                    if (ty < (int)grid.size() && grid[ty][tx]) {
-                        collision = true;
-                        break;
-                    }
-                }
-                if (collision) return trialY + 1;
+                if (collides(piece, startX, trialY)) return trialY + 1;
             }
             return 0;
         }
@@ -81,7 +76,7 @@ namespace Tetris {
                 if (tx < 0 || tx >= 10) [[unlikely]] continue;
 
                 while (ty >= (int)grid.size()) {
-                    grid.push_back(Row{false});
+                    grid.push_back(std::array<bool, 10>{false});
                 }
                 grid[ty][tx] = true;
             }
@@ -121,7 +116,7 @@ namespace Tetris {
                 }
             }
         
-            // since writeptr points to first full row to be discarded, resize to 
+            // since writeptr points to first full row to be discarded, resize to writeptr
             if (writePtr < totalRows) {
                 grid.resize(writePtr);
             }

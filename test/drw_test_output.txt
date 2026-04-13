@@ -1,0 +1,48 @@
+Running main() from ./googletest/src/gtest_main.cc
+[==========] Running 18 tests from 2 test suites.
+[----------] Global test environment set-up.
+[----------] 9 tests from StandardEngine
+[ RUN      ] StandardEngine.FindRestingY_EmptyBoard_LandsAtZero
+[       OK ] StandardEngine.FindRestingY_EmptyBoard_LandsAtZero (0 ms)
+[ RUN      ] StandardEngine.FindRestingY_BlockedRow_LandsOnTop
+[       OK ] StandardEngine.FindRestingY_BlockedRow_LandsOnTop (0 ms)
+[ RUN      ] StandardEngine.PlacePiece_QAtOrigin_SetsFourCells
+[       OK ] StandardEngine.PlacePiece_QAtOrigin_SetsFourCells (0 ms)
+[ RUN      ] StandardEngine.PlacePiece_GrowsBoardAsNeeded
+[       OK ] StandardEngine.PlacePiece_GrowsBoardAsNeeded (0 ms)
+[ RUN      ] StandardEngine.ClearLines_FullRow_IsRemoved
+[       OK ] StandardEngine.ClearLines_FullRow_IsRemoved (0 ms)
+[ RUN      ] StandardEngine.ClearLines_PartialRow_IsKept
+[       OK ] StandardEngine.ClearLines_PartialRow_IsKept (0 ms)
+[ RUN      ] StandardEngine.ProcessLine_SingleQ_HeightIsTwo
+Height = [2] after line = Q0[       OK ] StandardEngine.ProcessLine_SingleQ_HeightIsTwo (0 ms)
+[ RUN      ] StandardEngine.ProcessLine_TwoQsSameColumn_HeightIsFour
+Height = [4] after line = Q0,Q0[       OK ] StandardEngine.ProcessLine_TwoQsSameColumn_HeightIsFour (0 ms)
+[ RUN      ] StandardEngine.Run_DRWInputFile
+Height = [1] after line = I0,I4,Q8Height = [4] after line = T1,Z3,I4Height = [3] after line = Q0,I2,I6,I0,I6,I6,Q2,Q4Height = [0] after line = Q0,Q2,Q4,Q6,Q8Height = [4] after line = Q0,Q1Height = [2] after line = L0,J2,L4,J6,Q8Height = [4] after line = I0,I0,I0,I0Height = [2] after line = T0,T3,T6,T8Height = [6] after line = Z0,S2,Z4,S6,I6Height = [11] after line = L0,L1,L2,L3,L4,L5,L6,L7,L8[       OK ] StandardEngine.Run_DRWInputFile (3 ms)
+[----------] 9 tests from StandardEngine (3 ms total)
+
+[----------] 9 tests from BitsetEngine
+[ RUN      ] BitsetEngine.Collides_EmptyBoard_NoCollision
+[       OK ] BitsetEngine.Collides_EmptyBoard_NoCollision (0 ms)
+[ RUN      ] BitsetEngine.Collides_BlockedRow_DetectsCollision
+[       OK ] BitsetEngine.Collides_BlockedRow_DetectsCollision (0 ms)
+[ RUN      ] BitsetEngine.PlacePiece_QAtOrigin_SetsBits
+[       OK ] BitsetEngine.PlacePiece_QAtOrigin_SetsBits (0 ms)
+[ RUN      ] BitsetEngine.PlacePiece_GrowsHeightAsNeeded
+[       OK ] BitsetEngine.PlacePiece_GrowsHeightAsNeeded (0 ms)
+[ RUN      ] BitsetEngine.ClearLines_FullRow_IsRemoved
+[       OK ] BitsetEngine.ClearLines_FullRow_IsRemoved (0 ms)
+[ RUN      ] BitsetEngine.ClearLines_PartialRow_IsKept
+[       OK ] BitsetEngine.ClearLines_PartialRow_IsKept (0 ms)
+[ RUN      ] BitsetEngine.ProcessLine_SingleQ_HeightIsTwo
+Height = [2] after line = Q0[       OK ] BitsetEngine.ProcessLine_SingleQ_HeightIsTwo (0 ms)
+[ RUN      ] BitsetEngine.ProcessLine_TwoQsSameColumn_HeightIsFour
+Height = [4] after line = Q0,Q0[       OK ] BitsetEngine.ProcessLine_TwoQsSameColumn_HeightIsFour (0 ms)
+[ RUN      ] BitsetEngine.Run_DRWInputFile
+Height = [1] after line = I0,I4,Q8Height = [4] after line = T1,Z3,I4Height = [3] after line = Q0,I2,I6,I0,I6,I6,Q2,Q4Height = [0] after line = Q0,Q2,Q4,Q6,Q8Height = [4] after line = Q0,Q1Height = [2] after line = L0,J2,L4,J6,Q8Height = [4] after line = I0,I0,I0,I0Height = [2] after line = T0,T3,T6,T8Height = [6] after line = Z0,S2,Z4,S6,I6Height = [11] after line = L0,L1,L2,L3,L4,L5,L6,L7,L8[       OK ] BitsetEngine.Run_DRWInputFile (3 ms)
+[----------] 9 tests from BitsetEngine (3 ms total)
+
+[----------] Global test environment tear-down
+[==========] 18 tests from 2 test suites ran. (7 ms total)
+[  PASSED  ] 18 tests.

@@ -1,40 +1,31 @@
 CXX      = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -O2
+CXXFLAGS = -std=c++20 -Wall -Wextra -O2
 
 SRC_DIR  = src
 TEST_DIR = test
 BIN_DIR  = build
 
-TARGET      = $(BIN_DIR)/TetrisEngine
-TEST_TARGET          = $(BIN_DIR)/TetrisEngineTest
-FAST_TEST_TARGET     = $(BIN_DIR)/TetrisEngineFastTest
-BITSET_TEST_TARGET   = $(BIN_DIR)/TetrisEngineBitsetTest
+TEST_TARGET  = $(BIN_DIR)/TetrisEngineTest
+TEST_OUTPUT  = test/drw_test_output.txt
 
 GTEST_FLAGS = $(shell pkg-config --cflags --libs gtest_main)
 
-.PHONY: all test fast-test clean
+.PHONY: all test clean
 
-all: $(BIN_DIR) $(TARGET)
+all: $(BIN_DIR) $(TEST_TARGET)
 
-test: $(BIN_DIR) $(TEST_TARGET) $(FAST_TEST_TARGET) $(BITSET_TEST_TARGET)
-	./$(TEST_TARGET)
-	./$(FAST_TEST_TARGET)
-	./$(BITSET_TEST_TARGET)
+test: $(BIN_DIR) $(TEST_TARGET)
+	./$(TEST_TARGET) 2>&1 | tee $(TEST_OUTPUT)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
-$(TARGET): $(SRC_DIR)/TetrisEngine.hpp
-	$(CXX) $(CXXFLAGS) -x c++ -o $@ $<
-
-$(TEST_TARGET): $(TEST_DIR)/TetrisEngineTest.cpp $(SRC_DIR)/TetrisEngine.hpp
-	$(CXX) $(CXXFLAGS) -o $@ $< $(GTEST_FLAGS)
-
-$(FAST_TEST_TARGET): $(TEST_DIR)/TetrisEngineFastTest.cpp $(SRC_DIR)/TetrisEngineFast.hpp
-	$(CXX) $(CXXFLAGS) -o $@ $< $(GTEST_FLAGS)
-
-$(BITSET_TEST_TARGET): $(TEST_DIR)/TetrisEngineBitsetTest.cpp $(SRC_DIR)/TetrisEngineBitset.hpp
+$(TEST_TARGET): $(TEST_DIR)/TetrisEngineTest.cpp \
+                $(SRC_DIR)/TetrisEngine.hpp \
+                $(SRC_DIR)/TetrisTypes.hpp \
+                $(SRC_DIR)/TetrisTypesBitset.hpp
 	$(CXX) $(CXXFLAGS) -o $@ $< $(GTEST_FLAGS)
 
 clean:
 	rm -rf $(BIN_DIR)
+	truncate -s 0 $(TEST_OUTPUT)

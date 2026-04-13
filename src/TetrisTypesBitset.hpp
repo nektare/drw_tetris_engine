@@ -3,16 +3,20 @@
 #include <array>
 #include <algorithm>
 
+
 namespace Tetris {
+
     struct BitPiece {
         uint16_t rows[4]; // Row-wise bitmasks
         int h;            // Vertical span
     };
 
-    // FIXED: Using std::array allows the lambda to return the table by value.
-    // In C++, raw arrays decay to pointers, which cannot initialize constexpr.
-    // std::array is a LiteralType and maintains identical memory layout to T[N].
-    static constexpr std::array<BitPiece, 256> PieceTable = []() {
+    // O(1) Lookup Table using ASCII index key
+    // functions like map, but no dynamic allocation, 
+    // no hashing, no pointer indirection
+    // Piece definitions don't change and the memory desired is small
+    // This structure is bakedinto the binary at compile time
+    static constexpr std::array<BitPiece, 256> BitPieceTable = []() {
         std::array<BitPiece, 256> table{}; 
         // Bits represent column offsets; rows[0] is the bottom row of the piece
         table['Q'] = {{0b11, 0b11, 0, 0}, 2};   
@@ -24,12 +28,17 @@ namespace Tetris {
         table['J'] = {{0b11, 0b10, 0b10, 0}, 3};
         return table;
     }();
-
+ 
     struct BitBoard {
+
         uint16_t rows[128]; // Fixed-size array for L1 cache residency
         int height;
 
         BitBoard() : rows{}, height(0) {}
+        
+        inline int getHeight() {
+            return height;
+        }
 
         inline void reset() {
             std::fill(std::begin(rows), std::end(rows), 0);
@@ -42,6 +51,17 @@ namespace Tetris {
                 if ((rows[y + i] & (p.rows[i] << x)) != 0) return true;
             }
             return false;
+        }
+
+        // Find resting Y-coord using a top-down collision scan 
+        inline int findRestingY(const BitPiece& piece, int startX) const {
+            
+            for (int y = height; y >= 0; --y) {
+                if (collides(piece, startX, y)) {
+                    return y + 1;
+                }
+            }
+            return 0; // Return 0 if no collision found (bottom of board)
         }
 
         // O(1) bitwise placement using OR

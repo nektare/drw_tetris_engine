@@ -1,98 +1,97 @@
 #include <gtest/gtest.h>
+#include <sstream>
+#include <algorithm>
 
-// The "Cheat": Redefine private as public for the scope of this test file
 #define private public
 #include "../src/TetrisEngine.hpp"
+#include "../src/TetrisTypes.hpp"
+#include "../src/TetrisTypesBitset.hpp"
 #undef private
 
-// findRestingY 
-TEST(TetrisEngineTest, FindRestingY_EmptyBoard_LandsAtZero) {
-    TetrisEngine engine;
-    auto piece = engine.PieceDefinitionMap['Q'];
-    EXPECT_EQ(engine.findRestingY(piece, 0), 0);
+using StandardEngine = TetrisEngine<
+    Tetris::Board,
+    Tetris::Piece,
+    Tetris::PieceTable
+>;
+
+using BitsetEngine = TetrisEngine<
+    Tetris::BitBoard,
+    Tetris::BitPiece,
+    Tetris::BitPieceTable
+>;
+
+// StandardEngine 
+
+TEST(StandardEngine, FindRestingY_EmptyBoard_LandsAtZero) {
+    StandardEngine engine;
+    auto piece = Tetris::PieceTable['Q'];
+    EXPECT_EQ(engine.board.findRestingY(piece, 0), 0);
 }
 
-TEST(TetrisEngineTest, FindRestingY_BlockedRow_LandsOnTop) {
-    TetrisEngine engine;
-    engine.board.push_back({true, true, false, false, false, false, false, false, false, false});
-    auto piece = engine.PieceDefinitionMap['Q']; // 2 wide
-    // col 0-1 are occupied at y=0, Q piece should rest at y=1
-    EXPECT_EQ(engine.findRestingY(piece, 0), 1);
+TEST(StandardEngine, FindRestingY_BlockedRow_LandsOnTop) {
+    StandardEngine engine;
+    engine.board.grid.push_back({true, true, false, false, false, false, false, false, false, false});
+    auto piece = Tetris::PieceTable['Q'];
+    EXPECT_EQ(engine.board.findRestingY(piece, 0), 1);
 }
 
-// placePiece 
-TEST(TetrisEngineTest, PlacePiece_QAtOrigin_SetsFourCells) {
-    TetrisEngine engine;
-    auto piece = engine.PieceDefinitionMap['Q']; // (0,0),(1,0),(0,1),(1,1)
-    engine.placePiece(piece, 0, 0);
-    EXPECT_TRUE(engine.board[0][0]);
-    EXPECT_TRUE(engine.board[0][1]);
-    EXPECT_TRUE(engine.board[1][0]);
-    EXPECT_TRUE(engine.board[1][1]);
+TEST(StandardEngine, PlacePiece_QAtOrigin_SetsFourCells) {
+    StandardEngine engine;
+    auto piece = Tetris::PieceTable['Q']; // (0,0),(1,0),(0,1),(1,1)
+    engine.board.place(piece, 0, 0);
+    EXPECT_TRUE(engine.board.grid[0][0]);
+    EXPECT_TRUE(engine.board.grid[0][1]);
+    EXPECT_TRUE(engine.board.grid[1][0]);
+    EXPECT_TRUE(engine.board.grid[1][1]);
 }
 
-TEST(TetrisEngineTest, PlacePiece_GrowsBoardAsNeeded) {
-    TetrisEngine engine;
-    auto piece = engine.PieceDefinitionMap['I']; // 4 wide, 1 tall
-    engine.placePiece(piece, 0, 0);
-    EXPECT_EQ(engine.board.size(), 1u);
+TEST(StandardEngine, PlacePiece_GrowsBoardAsNeeded) {
+    StandardEngine engine;
+    auto piece = Tetris::PieceTable['I']; // 4 wide, 1 tall
+    engine.board.place(piece, 0, 0);
+    EXPECT_EQ(engine.board.grid.size(), 1u);
 }
 
-// clearLines 
-TEST(TetrisEngineTest, ClearLines_FullRow_IsRemoved) {
-    TetrisEngine engine;
-    TetrisEngine::Row full;
+TEST(StandardEngine, ClearLines_FullRow_IsRemoved) {
+    StandardEngine engine;
+    std::array<bool, 10> full;
     full.fill(true);
-    engine.board.push_back(full);
-    engine.clearLines();
-    EXPECT_EQ(engine.board.size(), 0u);
+    engine.board.grid.push_back(full);
+    engine.board.clearFullLines();
+    EXPECT_EQ(engine.board.grid.size(), 0u);
 }
 
-TEST(TetrisEngineTest, ClearLines_PartialRow_IsKept) {
-    TetrisEngine engine;
-    TetrisEngine::Row partial{};
+TEST(StandardEngine, ClearLines_PartialRow_IsKept) {
+    StandardEngine engine;
+    std::array<bool, 10> partial{};
     partial[0] = true;
-    engine.board.push_back(partial);
-    engine.clearLines();
-    EXPECT_EQ(engine.board.size(), 1u);
+    engine.board.grid.push_back(partial);
+    engine.board.clearFullLines();
+    EXPECT_EQ(engine.board.grid.size(), 1u);
 }
 
-// processLine 
-TEST(TetrisEngineTest, ProcessLine_SingleQ_HeightIsTwo) {
-    TetrisEngine engine;
+TEST(StandardEngine, ProcessLine_SingleQ_HeightIsTwo) {
+    StandardEngine engine;
     engine.processLine("Q0");
-    EXPECT_EQ(engine.board.size(), 2u);
+    EXPECT_EQ(engine.board.grid.size(), 2u);
 }
 
-TEST(TetrisEngineTest, ProcessLine_TwoQsSameColumn_HeightIsFour) {
-    TetrisEngine engine;
+TEST(StandardEngine, ProcessLine_TwoQsSameColumn_HeightIsFour) {
+    StandardEngine engine;
     engine.processLine("Q0,Q0");
-    EXPECT_EQ(engine.board.size(), 4u);
+    EXPECT_EQ(engine.board.grid.size(), 4u);
 }
 
-// 3 example sequences from the exercise pdf and a few more 
-TEST(TetrisEngineTest, Run_DRWInputFile) {
+TEST(StandardEngine, Run_DRWInputFile) {
     std::vector<std::string> expected = {
-               // Sequence                       Expected
-        "1",   // I0,I4,Q8                    →  1   (PDF example 1: bottom row clears)
-        "4",   // T1,Z3,I4                    →  4   (PDF example 2: no rows clear)
-        "3",   // Q0,I2,I6,I0,I6,I6,Q2,Q4     →  3   (PDF example 3: two rows clear)
-
-        "0",   // Q0,Q2,Q4,Q6,Q8 (important)  →  0   (5 Q's fill 10 cols, TWO rows clear!)
-        "4",   // Q0,Q1                       →  4   (two Q's overlapping, stacking)
-        "2",   // L0,J2,L4,J6,Q8              →  2   (mixed tall pieces)
-        "4",   // I0,I0,I0,I0                 →  4   (four I's stacked)
-        "2",   // T0,T3,T6,T8                 →  2   (four T's side by side)
-        "6",   // Z0,S2,Z4,S6,I6              →  6   (staircase of Z/S + I)
-        "11",  // L0,L1,L2,L3,L4,L5,L6,L7,L8  → 11   (nine L's packed)
+        "1", "4", "3", "0", "4", "2", "4", "2", "6", "11"
     };
 
     std::ostringstream captured;
     std::streambuf* orig = std::cout.rdbuf(captured.rdbuf());
-    TetrisEngine engine;
-    engine.run("test/data/drw_test_input.txt");
+    StandardEngine engine;
+    engine.run("test/drw_test_input.txt");
     std::cout.rdbuf(orig);
-
     std::cout << captured.str();
 
     std::string output = captured.str();
@@ -102,11 +101,95 @@ TEST(TetrisEngineTest, Run_DRWInputFile) {
     int i = 0;
     while (std::getline(ss, line)) {
         if (line.empty()) continue;
-        size_t lb = line.find('[');
-        size_t rb = line.find(']');
+        size_t lb = line.find('['), rb = line.find(']');
         if (lb == std::string::npos || rb == std::string::npos) continue;
-        std::string height = line.substr(lb + 1, rb - lb - 1);
-        EXPECT_EQ(height, expected[i]) << "Line " << i;
+        EXPECT_EQ(line.substr(lb + 1, rb - lb - 1), expected[i]) << "Line " << i;
+        ++i;
+    }
+    EXPECT_EQ(i, (int)expected.size());
+}
+
+// BitsetEngine
+
+TEST(BitsetEngine, Collides_EmptyBoard_NoCollision) {
+    BitsetEngine engine;
+    auto piece = Tetris::BitPieceTable['Q'];
+    EXPECT_FALSE(engine.board.collides(piece, 0, 0));
+}
+
+TEST(BitsetEngine, Collides_BlockedRow_DetectsCollision) {
+    BitsetEngine engine;
+    engine.board.rows[0] = 0b11;
+    engine.board.height = 1;
+    auto piece = Tetris::BitPieceTable['Q'];
+    EXPECT_TRUE(engine.board.collides(piece, 0, 0));
+}
+
+TEST(BitsetEngine, PlacePiece_QAtOrigin_SetsBits) {
+    BitsetEngine engine;
+    auto piece = Tetris::BitPieceTable['Q']; // rows: 0b11, 0b11
+    engine.board.place(piece, 0, 0);
+    EXPECT_EQ(engine.board.rows[0] & 0b11, 0b11u);
+    EXPECT_EQ(engine.board.rows[1] & 0b11, 0b11u);
+}
+
+TEST(BitsetEngine, PlacePiece_GrowsHeightAsNeeded) {
+    BitsetEngine engine;
+    auto piece = Tetris::BitPieceTable['I']; // 1 row tall
+    engine.board.place(piece, 0, 0);
+    EXPECT_EQ(engine.board.height, 1);
+}
+
+TEST(BitsetEngine, ClearLines_FullRow_IsRemoved) {
+    BitsetEngine engine;
+    engine.board.rows[0] = 0x3FF;
+    engine.board.height = 1;
+    engine.board.clearFullLines();
+    EXPECT_EQ(engine.board.height, 0);
+}
+
+TEST(BitsetEngine, ClearLines_PartialRow_IsKept) {
+    BitsetEngine engine;
+    engine.board.rows[0] = 0b11;
+    engine.board.height = 1;
+    engine.board.clearFullLines();
+    EXPECT_EQ(engine.board.height, 1);
+}
+
+TEST(BitsetEngine, ProcessLine_SingleQ_HeightIsTwo) {
+    BitsetEngine engine;
+    engine.processLine("Q0");
+    EXPECT_EQ(engine.board.height, 2);
+}
+
+TEST(BitsetEngine, ProcessLine_TwoQsSameColumn_HeightIsFour) {
+    BitsetEngine engine;
+    engine.processLine("Q0,Q0");
+    EXPECT_EQ(engine.board.height, 4);
+}
+
+TEST(BitsetEngine, Run_DRWInputFile) {
+    std::vector<std::string> expected = {
+        "1", "4", "3", "0", "4", "2", "4", "2", "6", "11"
+    };
+
+    std::ostringstream captured;
+    std::streambuf* orig = std::cout.rdbuf(captured.rdbuf());
+    BitsetEngine engine;
+    engine.run("test/drw_test_input.txt");
+    std::cout.rdbuf(orig);
+    std::cout << captured.str();
+
+    std::string output = captured.str();
+    std::replace(output.begin(), output.end(), '\r', '\n');
+    std::istringstream ss(output);
+    std::string line;
+    int i = 0;
+    while (std::getline(ss, line)) {
+        if (line.empty()) continue;
+        size_t lb = line.find('['), rb = line.find(']');
+        if (lb == std::string::npos || rb == std::string::npos) continue;
+        EXPECT_EQ(line.substr(lb + 1, rb - lb - 1), expected[i]) << "Line " << i;
         ++i;
     }
     EXPECT_EQ(i, (int)expected.size());
