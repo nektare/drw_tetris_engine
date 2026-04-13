@@ -61,7 +61,7 @@ namespace Tetris {
                     return y + 1;
                 }
             }
-            return 0; // Return 0 if no collision found (bottom of board)
+            return 0; // if no collision found (bottom of board)
         }
 
         // O(1) bitwise placement using OR
@@ -82,7 +82,7 @@ namespace Tetris {
                     writePtr++;
                 }
             }
-            // Zero out stale rows to maintain deterministic state
+            // Zero out the tail so cleared rows dont leave ghost bits
             for (int i = writePtr; i < height; ++i) rows[i] = 0;
             height = writePtr;
         }

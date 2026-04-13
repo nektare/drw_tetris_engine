@@ -17,6 +17,7 @@ private:
     }
 
     void processToken(std::string_view token) {
+        
         if (token.length() < 2) [[unlikely]] return;
 
         char type = token[0];
@@ -51,11 +52,13 @@ public:
             }
 
             // if we just processed the last piece, break out of the line processing loop
-            if (end == std::string_view::npos) break;
+            if (end == std::string_view::npos) {
+                break;
+            }
+
             start = end + 1;
         }
         
-        // Unified height interface: both Boards now implement getHeight()
         std::cout << "Height = [" << board.getHeight() << "] after line = " << line; 
     }
 

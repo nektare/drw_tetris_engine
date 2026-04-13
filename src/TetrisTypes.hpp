@@ -10,7 +10,6 @@ namespace Tetris {
         int x, y;
     };
 
-    // Fixed size Piece struct for stack allocation
     struct Piece {
         std::array<Point, 4> points;
     };
@@ -37,22 +36,23 @@ namespace Tetris {
         
         std::vector<std::array<bool, 10>> grid; // test spec says height can be assumed max 100
         // with a vector, I dont have to keep track of "height". Size gives the height 
-        // Its heap allocation is contiguous. So it is not that bad.
+        // It is heap allocation but it is contiguous. So cache locality is preserved
         
         inline int getHeight() {
             return grid.size();
         }
 
+        // spec says: for each new input line start with empty board
         inline void reset() {
-            grid.clear(); // spec says: for each new input line start with empty board
+            grid.clear(); 
         }
 
-        // Helper for collision detection to keep findRestingY clean
+        // Helper for collision detection to keep findRestingY
         inline bool collides(const Piece& piece, int startX, int trialY) const {
             for (const auto& p : piece.points) {
                 int tx = startX + p.x;
                 int ty = trialY + p.y;
-                if (ty < 0) return true;
+                // if (ty < 0) return true; // spec says input is valid
                 if (ty < (int)grid.size() && grid[ty][tx]) return true;
             }
             return false;
@@ -75,6 +75,8 @@ namespace Tetris {
                 // Boundary Safety
                 if (tx < 0 || tx >= 10) [[unlikely]] continue;
 
+                // make sure the board has placeholders for rows implied by ty 
+                // Remember ty is the row 
                 while (ty >= (int)grid.size()) {
                     grid.push_back(std::array<bool, 10>{false});
                 }
@@ -82,9 +84,8 @@ namespace Tetris {
             }
         }
 
-        // Used two pointers: O(N) cost
-        // Think of writePtr as the last non full row from bottom to top
-        // All rows under it non full. All above it full 
+        // Used two pointers: O(N) cost. readPtr loops through rows.
+        // And at the end of line processing: All rows under writePtr are non-full. All above it are full 
         inline void clearFullLines() {
             size_t writePtr = 0;
             const size_t totalRows = grid.size();
@@ -99,15 +100,14 @@ namespace Tetris {
                         break;
                     }
                 }
-                // if the row of readptr is not full, writeptr and readptr advance 
-                // Imp Note: at full rows, writeptr would point to full row at PREVIOUS
-                // iteration. Thus writeptr starts point to first full row. 
-                // As readptr moves to next row
-                // if it also full, writeptr still stays at the previous full row
-                // this continues till readptr hits a non-full row at this point, wrtitepr ! readptr and 
-                // that nonfull row gets moved to botton first row that needs discarding.
-                // EFFECTIVELY : Writeptr always points to the FIRST FULL ROW 
-                // with all non-full rows below it 
+                // Both start at 0, moving together while rows are non-full.
+                // At the first full row: readPtr advances past it, writePtr stays. So now they diverge. 
+                // writePtr is pointing at the slot that full row occupied.
+                //   a) At each subsequent full row: readPtr keeps advancing, writePtr stays frozen. 
+                //      The gap widens.
+                //   b) When readPtr hits the next non-full row: it gets moved into writePtr's slot 
+                //      (filling the hole left by the first full row), then writePtr advances once.
+                // At the end: writePtr equals the number of non-full rows kept. resize(writePtr) drops the tail. 
                 if (!isFull) {
                     if (writePtr != readPtr) {
                         grid[writePtr] = std::move(grid[readPtr]);
@@ -116,7 +116,7 @@ namespace Tetris {
                 }
             }
         
-            // since writeptr points to first full row to be discarded, resize to writeptr
+            // drop full rows — everything from writePtr onward are full - discard
             if (writePtr < totalRows) {
                 grid.resize(writePtr);
             }
