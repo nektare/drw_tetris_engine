@@ -25,7 +25,8 @@ using BitsetEngine = TetrisEngine<
 
 TEST(StandardEngine, Run_DRWInputFile) {
     std::vector<std::string> expected = {
-        "1", "4", "3", "0", "4", "2", "4", "2", "6", "11"
+        "2", "4", "0", "2", "4", "1", "0", "2", "2", "2",
+        "1", "1", "4", "3", "1", "2", "1", "8", "8", "0", "3"
     };
 
     std::ostringstream captured;
@@ -52,7 +53,8 @@ TEST(StandardEngine, Run_DRWInputFile) {
 
 TEST(BitsetEngine, Run_DRWInputFile) {
     std::vector<std::string> expected = {
-        "1", "4", "3", "0", "4", "2", "4", "2", "6", "11"
+        "2", "4", "0", "2", "4", "1", "0", "2", "2", "2",
+        "1", "1", "4", "3", "1", "2", "1", "8", "8", "0", "3"
     };
 
     std::ostringstream captured;

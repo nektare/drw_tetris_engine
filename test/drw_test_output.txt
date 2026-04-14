@@ -3,12 +3,52 @@ Running main() from ./googletest/src/gtest_main.cc
 [----------] Global test environment set-up.
 [----------] 1 test from StandardEngine
 [ RUN      ] StandardEngine.Run_DRWInputFile
-Height = [1] after line = I0,I4,Q8Height = [4] after line = T1,Z3,I4Height = [3] after line = Q0,I2,I6,I0,I6,I6,Q2,Q4Height = [0] after line = Q0,Q2,Q4,Q6,Q8Height = [4] after line = Q0,Q1Height = [2] after line = L0,J2,L4,J6,Q8Height = [4] after line = I0,I0,I0,I0Height = [2] after line = T0,T3,T6,T8Height = [6] after line = Z0,S2,Z4,S6,I6Height = [11] after line = L0,L1,L2,L3,L4,L5,L6,L7,L8[       OK ] StandardEngine.Run_DRWInputFile (3 ms)
+Height = [2] after line = Q0
+Height = [4] after line = Q0,Q1
+Height = [0] after line = Q0,Q2,Q4,Q6,Q8
+Height = [2] after line = Q0,Q2,Q4,Q6,Q8,Q1
+Height = [4] after line = Q0,Q2,Q4,Q6,Q8,Q1,Q1
+Height = [1] after line = I0,I4,Q8
+Height = [0] after line = I0,I4,Q8,I0,I4
+Height = [2] after line = L0,J2,L4,J6,Q8 <--
+Height = [2] after line = L0,Z1,Z3,Z5,Z7
+Height = [2] after line = T0,T3
+Height = [1] after line = T0,T3,I6,I6
+Height = [1] after line = I0,I6,S4 <--
+Height = [4] after line = T1,Z3,I4
+Height = [3] after line = L0,J3,L5,J8,T1
+Height = [1] after line = L0,J3,L5,J8,T1,T6
+Height = [2] after line = L0,J3,L5,J8,T1,T6,J2,L6,T0,T7
+Height = [1] after line = L0,J3,L5,J8,T1,T6,J2,L6,T0,T7,Q4
+Height = [8] after line = S0,S2,S4,S6
+Height = [8] after line = S0,S2,S4,S5,Q8,Q8,Q8,Q8,T1,Q1,I0,Q4
+Height = [0] after line = L0,J3,L5,J8,T1,T6,S2,Z5,T0,T7
+Height = [3] after line = Q0,I2,I6,I0,I6,I6,Q2,Q4 [       OK ] StandardEngine.Run_DRWInputFile (3 ms)
 [----------] 1 test from StandardEngine (3 ms total)
 
 [----------] 1 test from BitsetEngine
 [ RUN      ] BitsetEngine.Run_DRWInputFile
-Height = [1] after line = I0,I4,Q8Height = [4] after line = T1,Z3,I4Height = [3] after line = Q0,I2,I6,I0,I6,I6,Q2,Q4Height = [0] after line = Q0,Q2,Q4,Q6,Q8Height = [4] after line = Q0,Q1Height = [2] after line = L0,J2,L4,J6,Q8Height = [4] after line = I0,I0,I0,I0Height = [2] after line = T0,T3,T6,T8Height = [6] after line = Z0,S2,Z4,S6,I6Height = [11] after line = L0,L1,L2,L3,L4,L5,L6,L7,L8[       OK ] BitsetEngine.Run_DRWInputFile (2 ms)
+Height = [2] after line = Q0
+Height = [4] after line = Q0,Q1
+Height = [0] after line = Q0,Q2,Q4,Q6,Q8
+Height = [2] after line = Q0,Q2,Q4,Q6,Q8,Q1
+Height = [4] after line = Q0,Q2,Q4,Q6,Q8,Q1,Q1
+Height = [1] after line = I0,I4,Q8
+Height = [0] after line = I0,I4,Q8,I0,I4
+Height = [2] after line = L0,J2,L4,J6,Q8
+Height = [2] after line = L0,Z1,Z3,Z5,Z7
+Height = [2] after line = T0,T3
+Height = [1] after line = T0,T3,I6,I6
+Height = [1] after line = I0,I6,S4
+Height = [4] after line = T1,Z3,I4
+Height = [3] after line = L0,J3,L5,J8,T1
+Height = [1] after line = L0,J3,L5,J8,T1,T6
+Height = [2] after line = L0,J3,L5,J8,T1,T6,J2,L6,T0,T7
+Height = [1] after line = L0,J3,L5,J8,T1,T6,J2,L6,T0,T7,Q4
+Height = [8] after line = S0,S2,S4,S6
+Height = [8] after line = S0,S2,S4,S5,Q8,Q8,Q8,Q8,T1,Q1,I0,Q4
+Height = [0] after line = L0,J3,L5,J8,T1,T6,S2,Z5,T0,T7
+Height = [3] after line = Q0,I2,I6,I0,I6,I6,Q2,Q4 [       OK ] BitsetEngine.Run_DRWInputFile (2 ms)
 [----------] 1 test from BitsetEngine (2 ms total)
 
 [----------] Global test environment tear-down

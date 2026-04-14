@@ -15,9 +15,9 @@ Processes sequences of pre-defined Tetris pieces dropped into a 10-unit wide gri
 ## Project Structure
 
 ```
-src/TetrisEngine.hpp          # Templatized engine logic
-src/TetrisTypes.hpp           # Standard coordinate-based board and piece types
-src/TetrisTypesBitset.hpp     # Optimized bitset board and piece types
+src/TetrisEngine.hpp                   # Templatized engine logic
+src/TetrisTypes.hpp                    # Standard coordinate-based board and piece types
+src/TetrisTypesBitset.hpp              # Optimized bitset board and piece types
 test/TetrisEngineTest.cpp              # Full engine tests (GoogleTest)
 test/TetrisEngineFunctionLevelTest.cpp # Function-level unit tests (GoogleTest)
 test/TetrisEnginePerfTest.cpp          # Performance benchmark
@@ -35,19 +35,34 @@ make perf   # build and run performance benchmark
 make clean  # clean build artifacts
 ```
 
-## Performance
+## Output for the given input
 
-Benchmark: 1 million iterations over standard test cases.
-
-| Engine         | Time     |
-|----------------|----------|
-| StandardEngine | 2526 ms  |
-| BitsetEngine   | 1190 ms  |
-| **Speedup**    | **2.12x**|
-
-The bitset implementation doubles throughput via bitwise parallelism and L1 cache residency.
+```
+Height = [2] after line = Q0
+Height = [4] after line = Q0,Q1
+Height = [0] after line = Q0,Q2,Q4,Q6,Q8
+Height = [2] after line = Q0,Q2,Q4,Q6,Q8,Q1
+Height = [4] after line = Q0,Q2,Q4,Q6,Q8,Q1,Q1
+Height = [1] after line = I0,I4,Q8
+Height = [0] after line = I0,I4,Q8,I0,I4
+Height = [2] after line = L0,J2,L4,J6,Q8
+Height = [2] after line = L0,Z1,Z3,Z5,Z7
+Height = [2] after line = T0,T3
+Height = [1] after line = T0,T3,I6,I6
+Height = [1] after line = I0,I6,S4
+Height = [4] after line = T1,Z3,I4
+Height = [3] after line = L0,J3,L5,J8,T1
+Height = [1] after line = L0,J3,L5,J8,T1,T6
+Height = [2] after line = L0,J3,L5,J8,T1,T6,J2,L6,T0,T7
+Height = [1] after line = L0,J3,L5,J8,T1,T6,J2,L6,T0,T7,Q4
+Height = [8] after line = S0,S2,S4,S6
+Height = [8] after line = S0,S2,S4,S5,Q8,Q8,Q8,Q8,T1,Q1,I0,Q4
+Height = [0] after line = L0,J3,L5,J8,T1,T6,S2,Z5,T0,T7
+Height = [3] after line = Q0,I2,I6,I0,I6,I6,Q2,Q4
+```
 
 ## Implementation Details
+
 
 ### Bitset Math
 
@@ -62,3 +77,16 @@ Full row check: row == 0x3FF
 ### Row Compaction
 
 Single pass through the board. Non-full rows are moved down to `writePtr`, full rows are skipped. `height = writePtr` at the end drops the tail.
+
+## Performance
+
+Benchmark: 1 million iterations(each iteration of 10 lines)  over standard test cases.
+
+| Engine            | Time     |   
+|-------------------|----------|   
+| StandardEngine    | 2526 ms  |   
+| BitsetEngine      | 1190 ms  |   
+| **Speedup**       | **2.12x**|   
+
+The bitset implementation doubles throughput via bitwise parallelism and L1 cache residency.
+
